@@ -22,11 +22,12 @@ def build_hdn(graph):
             j = dgraph.GetNI(i.GetID())
             j.Next()
             while j < dgraph.EndNI():
-                if graph.IsEdge(i.GetId(), j.GetId()):
+                if dgraph.IsEdge(i.GetId(), j.GetId()):
                     continue
-                for y in ggraph.Nodes():
-                    if graph.IsEdge(i.GetId(), y.GetId()) and graph.IsEdge(y.GetId(), j.GetId()):
-                        dgraph.AddEdge(i.GetId(), j.GetId())
+                i_neighbors = get_neighbors(graph, i.GetId())
+                j_neighbors = get_neighbors(graph, j.GetId())
+                if len(i_neighbors.intersect(j_neighbors)) > 0:
+                    d_graph.AddEdge(i.GetId(), j.GetId())
                 j.Next()
         fout = snap.TFOut('hdn.graph')
         dgraph.Save(fout)
@@ -85,18 +86,20 @@ def deg_counts_plot(deg_counts, color):
     y = np.log10(y)
     plt.plot(x, y, color=color, linestyle="", marker="o")
 
+def get_neighbors(graph, nodeId):
+    n = set([])
+    for i in range(graph.GetNI(nodeId).GetDeg()):
+        n.add(graph.GetNI(nodeId).GetNbrNId(i))
+    return n
+    
 
 def disease_sim(graph):
     crohnid = 200E6 + 10346
     leukid = 200E6 + 23418
     assert(graph.IsNode(crohnid))
     assert(graph.IsNode(leukid))
-    c_neighbors = set([])
-    l_neighbors = set([])
-    for i in range(graph.GetNI(crohnid).GetDeg()):
-        c_neighbors.add(graph.GetNI(crohnid).GetNbrNId(i))
-    for i in range(graph.GetNI(leukid).GetDeg()):
-        l_neighbors.add(graph.GetNI(leukid).GetNbrNId(i))
+    c_neighbors = get_neighbors(graph, crohnid)
+    l_neighbors = get_neighbors(graph, leukid)
     
     print 'CN = {}'.format(len(c_neighbors.intersection(l_neighbors)))
     print 'JA = {}'.format(len(c_neighbors.intersection(l_neighbors)) / (1.0 * len(c_neighbors.union(l_neighbors))))
