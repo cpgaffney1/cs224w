@@ -101,12 +101,20 @@ def q2_2():
             reached_in_cum.append(len(reached_in))
 
         y = reached_out_cum
-        plt.plot(y, label='Reachability using outlinks for %s' % name)
+        if name == 'epinions':
+            plt.plot(y, label='Reachability using outlinks for %s' % name)
+            plt.yscale('log')
+        else:
+            plt.plot(y, label='Reachability using outlinks for %s' % name)
         plt.savefig('outlinks_%s.png' % name)
         plt.close()
 
         y = reached_in_cum
-        plt.plot(y, label='Reachibility using inlinks for %s' % name)
+        if name == 'email':
+            plt.plot(y, label='Reachability using inlinks for %s' % name)
+            plt.yscale('log')
+        else:
+            plt.plot(y, label='Reachability using inlinks for %s' % name)
         plt.savefig('inlinks_%s.png' % name)
         plt.close()
 
@@ -130,8 +138,34 @@ def q2_3():
     ##########################################################################
     #TODO: See above.
     #Your code here:
+    def per_graph(graph, name):
+        mxWcc = snap.GetMxWcc(graph)
+        mxScc = snap.GetMxScc(graph)
+        print ''
+        print 'Size analysis on {}'.format(name)
+        print 'Disconnected size = {}'.format(graph.GetNodes() - mxWcc.GetNodes())
+        print 'SCC size = {}'.format(mxScc.GetNodes())
+        
+        trials = 200
+        avg_reached_out = 0
+        avg_reached_in = 0
+        for _ in range(trials):
+            nodeId = mxScc.GetRndNId()
+            avg_reached_out += snap.GetBfsTree(graph, nodeId, True, False).GetNodes()
+            avg_reached_in += snap.GetBfsTree(graph, nodeId, False, True).GetNodes()
+
+        scc_out = float(avg_reached_out) / trials
+        scc_in = float(avg_reached_in) / trials
+
+        out_sz = scc_out - mxScc.GetNodes()
+        in_sz = scc_in - mxScc.GetNodes()
+        print 'OUT size = {}'.format(out_sz)
+        print 'IN size = {}'.format(in_sz)
+        print 'Tendrils/Tubes size = {}'.format(mxWcc.GetNodes() - mxScc.GetNodes() - out_sz - in_sz)
     
-    
+
+    per_graph(load_graph('email'), 'email')
+    per_graph(load_graph('epinions'), 'epinions')
     
     
     
@@ -166,9 +200,8 @@ def q2_4():
         for _ in range(trials):
             node1 = graph.GetRndNId()
             node2 = graph.GetRndNId()
-            nid_to_dist = snap.TIntH()
-            shortestPath = snap.GetShortPath(graph, node1, nid_to_dist)
-            if node2 in nid_to_dist:
+            shortestPath = snap.GetShortPath(graph, node1, node2, True)
+            if shortestPath > 0:
                 reachable_count += 1
         return float(reachable_count) / float(trials)
     

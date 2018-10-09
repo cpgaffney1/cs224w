@@ -1,5 +1,6 @@
 import snap
 from sets import Set
+import os
 import numpy as np
 import matplotlib
 matplotlib.use('agg')
@@ -16,19 +17,19 @@ def build_hdn(graph):
             if is_gene(node):
                 ggraph.AddNode(node.GetId())
             else:
-                dgraph.AddNode(node.GetId())
+               dgraph.AddNode(node.GetId())
         for i in dgraph.Nodes():
-            print 'node {}'.format(i)
-            j = dgraph.GetNI(i.GetID())
-            j.Next()
-            while j < dgraph.EndNI():
+            print 'node {}'.format(i.GetId())
+            for j in dgraph.Nodes():
+                if i.GetId() == j.GetId():
+                    continue
                 if dgraph.IsEdge(i.GetId(), j.GetId()):
                     continue
                 i_neighbors = get_neighbors(graph, i.GetId())
                 j_neighbors = get_neighbors(graph, j.GetId())
-                if len(i_neighbors.intersect(j_neighbors)) > 0:
-                    d_graph.AddEdge(i.GetId(), j.GetId())
-                j.Next()
+                if len(i_neighbors.intersection(j_neighbors)) > 0:
+                    dgraph.AddEdge(i.GetId(), j.GetId())
+
         fout = snap.TFOut('hdn.graph')
         dgraph.Save(fout)
         fout.Flush()
@@ -37,6 +38,8 @@ def build_hdn(graph):
     print 'HDN graph'
     print 'nodes = {}'.format(dgraph.GetNodes())
     print 'edges = {}'.format(dgraph.GetEdges())
+    print 'density = {}'.format(2.0 * dgraph.GetEdges() / (dgraph.GetNodes() * (dgraph.GetNodes() - 1.0)))
+    print 'clust coef = {}'.format(snap.GetClustCf(dgraph, 100))
     return dgraph
 
 def load_graph():
@@ -53,7 +56,7 @@ def load_graph():
     return G
 
 def is_gene(node):
-    return node.GetId() > 200E6
+    return node.GetId() < 200E6
 
 def make_plots(graph):
     gene_deg_counts = {}
@@ -91,18 +94,87 @@ def get_neighbors(graph, nodeId):
     for i in range(graph.GetNI(nodeId).GetDeg()):
         n.add(graph.GetNI(nodeId).GetNbrNId(i))
     return n
-    
+   
+def max_clique(graph):
+    mxcl = 0
+    for node in graph.Nodes():
+        if is_gene(node):
+            sz = node.GetDeg()
+            if sz > mxcl:
+                mxcl = sz
+    print ''
+    print 'HDN max clique size = {}'.format(mxcl)
+
 
 def disease_sim(graph):
-    crohnid = 200E6 + 10346
-    leukid = 200E6 + 23418
+    crohnid = 200000000 + 10346
+    leukid = 200000000 + 23418
+
+    def top_five_sim(nid, metric):
+        if nid == crohnid:
+            name = 'crohn'
+        else:
+            name = 'leuk'
+        print ''
+        print 'Scores for {} using {}'.format(name, metric)
+        top_five = []
+        top_five_scores = []
+        for node in graph.Nodes():
+            if is_gene(node):
+                continue
+            if nid == crohnid and node.GetId() == crohnid:
+                continue
+            if nid == leukid and node.GetId() == leukid:
+                continue
+            nid_nb = get_neighbors(graph, nid)
+            nb = get_neighbors(graph, node.GetId())
+            if metric == 'CN':
+                print nid_nb
+                print nb
+                score = len(nid_nb.intersection(nb))
+            else:
+                score = len(nid_nb.intersection(nb)) / (1.0 * len(nid_nb.union(nb)))
+            if len(top_five) < 5:
+                top_five.append(node.GetId())
+                top_five_scores.append(score)
+            else:
+                min_ind = np.argmin(top_five_scores)
+                if score > top_five_scores[min_ind]:
+                    top_five[min_ind] = node.GetId()
+                    top_five_scores[min_ind] = score
+        print top_five
+        print top_five_scores
+
     assert(graph.IsNode(crohnid))
     assert(graph.IsNode(leukid))
-    c_neighbors = get_neighbors(graph, crohnid)
-    l_neighbors = get_neighbors(graph, leukid)
+    top_five_sim(crohnid, 'CN')
+    top_five_sim(crohnid, 'JA')
+    top_five_sim(leukid, 'CN')
+    top_five_sim(leukid, 'JA')
+
+def contraction(graph, hdn):
     
-    print 'CN = {}'.format(len(c_neighbors.intersection(l_neighbors)))
-    print 'JA = {}'.format(len(c_neighbors.intersection(l_neighbors)) / (1.0 * len(c_neighbors.union(l_neighbors))))
+    def contract_clique(node):
+        clique = get_neighbors(graph, node.GetId())
+        supernodeId = clique.pop()
+        for nodeId in clique:
+            for nbrId in get_neighbors(hdn, nodeId):
+                hdn.AddEdge(supernodeId, nbrId)
+            hdn.DelNode(nodeId)
+            graph.DelNode(nodeId)
+
+    node = graph.BegNI()
+    while node < graph.EndNI():
+        if is_gene(node) and node.GetDeg() > 250:
+            contract_clique(node)
+        node.Next()
+        
+    contracted = hdn
+    clust_cf = snap.GetClustCf(contracted, int(1000))
+    print ''
+    print 'Contracted graph stats'
+    print 'clust cf = {}'.format(clust_cf)
+    print 'density = {}'.format(2 * contracted.GetEdges() / (contracted.GetNodes() * (contracted.GetNodes() - 1)))
 
 def main():
     graph = load_graph()
@@ -110,6 +182,8 @@ def main():
     make_plots(graph)    
     hdn = build_hdn(graph)
     disease_sim(graph)
+    max_clique(graph)
+    contraction(graph, hdn)
 
 def print_graph_stats(graph):
     print 'nodes = {}'.format(graph.GetNodes())
