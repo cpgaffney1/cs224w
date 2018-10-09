@@ -142,6 +142,10 @@ def loadCollabNet(path):
     ############################################################################
     # TODO: Your code here!
     Graph = snap.LoadEdgeList(snap.PUNGraph, path, 0, 1)
+    for node in Graph.Nodes():
+        if Graph.IsEdge(node.GetId(), node.GetId()):
+            Graph.DelEdge(node.GetId(), node.GetId())
+    assert Graph.GetEdges() == 14484
     ############################################################################
     return Graph
 
@@ -256,7 +260,17 @@ def Q1_2():
     print('Clustering Coefficient for Erdos Renyi Network: %f' % C_erdosRenyi)
     print('Clustering Coefficient for Small World Network: %f' % C_smallWorld)
     print('Clustering Coefficient for Collaboration Network: %f' % C_collabNet)
+    
+    print 'Computed using library functions...'
+    
+    C_erdosRenyi = snap.GetClustCf(erdosRenyi, 5242)
+    C_smallWorld =  snap.GetClustCf(smallWorld, 5242)
+    C_collabNet = snap.GetClustCf(collabNet, 5242)
 
+    print('Clustering Coefficient for Erdos Renyi Network: %f' % C_erdosRenyi)
+    print('Clustering Coefficient for Small World Network: %f' % C_smallWorld)
+    print('Clustering Coefficient for Collaboration Network: %f' % C_collabNet)
+    
 
 # Execute code for Q1.2
 Q1_2()
