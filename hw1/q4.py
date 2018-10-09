@@ -176,14 +176,45 @@ def contraction(graph, hdn):
     print 'clust cf = {}'.format(clust_cf)
     print 'density = {}'.format(2 * contracted.GetEdges() / (contracted.GetNodes() * (contracted.GetNodes() - 1)))
 
+def contraction(graph, hdn):
+    
+    def contract_clique(node):
+        clique = get_neighbors(graph, node.GetId())
+        supernodeId = clique.pop()
+        for nodeId in clique:
+            for nbrId in get_neighbors(hdn, nodeId):
+                hdn.AddEdge(supernodeId, nbrId)
+            hdn.DelNode(nodeId)
+
+    for node in graph.Nodes():
+        if is_gene(node) and node.GetDeg() > 250:
+            contract_clique(node)
+        
+    contracted = hdn
+    clust_cf = snap.GetClustCf(contracted, int(1000))
+    print ''
+    print 'Contracted graph stats'
+    print 'clust cf = {}'.format(clust_cf)
+    print 'density = {}'.format(2 * dgraph.GetEdges() / (dgraph.GetNodes() * (dgraph.GetNodes() - 1)))
+
 def main():
     graph = load_graph()
     print_graph_stats(graph)
     make_plots(graph)    
     hdn = build_hdn(graph)
+    check_hdn_edges(hdn, graph) 
+    max_clique(graph)
+    contraction(graph, hdn)
     disease_sim(graph)
     max_clique(graph)
     contraction(graph, hdn)
+
+def check_hdn_edges(hdn, graph):
+    for node in graph.Nodes():
+        if is_gene(node):
+            for i in get_neighbors(graph, node.GetId()):
+                for j in get_neighbors(graph, node.GetId()):
+                    assert(hdn.IsEdge(i, j))
 
 def print_graph_stats(graph):
     print 'nodes = {}'.format(graph.GetNodes())
