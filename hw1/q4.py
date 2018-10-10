@@ -20,7 +20,9 @@ def build_hdn(graph):
                dgraph.AddNode(node.GetId())
         for i in dgraph.Nodes():
             print 'node {}'.format(i.GetId())
-            for j in dgraph.Nodes():
+            j = dgraph.GetNI(i.GetId())
+            j.Next()
+            while j < dgraph.EndNI():
                 if i.GetId() == j.GetId():
                     continue
                 if dgraph.IsEdge(i.GetId(), j.GetId()):
@@ -29,6 +31,7 @@ def build_hdn(graph):
                 j_neighbors = get_neighbors(graph, j.GetId())
                 if len(i_neighbors.intersection(j_neighbors)) > 0:
                     dgraph.AddEdge(i.GetId(), j.GetId())
+                j.Next()
 
         fout = snap.TFOut('hdn.graph')
         dgraph.Save(fout)
