@@ -61,13 +61,18 @@ def gen_config_model_rewire(graph, iterations=10000):
     for edge in config_graph.Edges():
         edges.append((edge.GetSrcNId(), edge.GetDstNId()))
     np.random.shuffle(edges)
+    edges = set(edges)
     i = 0
     while i < t:
         if i % 100 == 0:
             cf = snap.GetClustCf(config_graph, 1000)         
             cfs.append(cf)
-        e1 = edges.pop(0)
-        e2 = edges.pop(0)
+        e1 = edges.pop()
+        e2 = edges.pop()
+        if e1[0] == e1[1] or e2[0] == e2[1]:
+            edges.add(e1)
+            edges.add(e2)
+            continue
         if np.random.rand() < 0.5:
             u = e1[0]
             v = e1[1]
@@ -81,17 +86,17 @@ def gen_config_model_rewire(graph, iterations=10000):
             w = e2[1]
             x = e2[0]
         if not config_graph.IsEdge(u, w) and not config_graph.IsEdge(v, x) and u != w and v != x:
-            edges.append((u, w))
-            edges.append((v, x))
+            edges.add((u, w))
+            edges.add((v, x))
             config_graph.DelEdge(e1[0], e1[1])
             config_graph.DelEdge(e2[0], e2[1]) 
             config_graph.AddEdge(u, w)
             config_graph.AddEdge(v, x)
             i += 1
         else:
-            edges.append(e1)
-            edges.append(e2)
-        np.random.shuffle(edges)
+            edges.add(e1)
+            edges.add(e2)
+            continue
     
     assert(config_graph.GetNodes() == n)
     assert(config_graph.GetEdges() == e)
@@ -261,6 +266,9 @@ def q3_3():
     plt.clf()
     print z
 
+
+    
+    
     # Experiment for the email dataset
     #TODO: Your code here
     motifs = np.zeros((10,13))
@@ -279,7 +287,7 @@ def q3_3():
     print z
     plt.clf()
 
-
+    
 
     ##########################################################################
 
