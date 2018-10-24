@@ -1,0 +1,17 @@
+/*****
+Subgraph around node 1
+*****/
+
+graph G {
+  graph [splines=false overlap=false]
+  node  [shape=ellipse, width=0.3, height=0.3]
+  0 ;
+  1 ;
+  946 ;
+  1084 ;
+  0 -- 1;
+  0 -- 1084;
+  1 -- 946;
+  1 -- 1084;
+  label = "\nSubgraph around node 1\n";  fontsize=24;
+}
