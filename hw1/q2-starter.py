@@ -83,38 +83,33 @@ def q2_2():
     #Your code here:
     
     def reachable_analysis(graph, name):
-        reached_out = Set([])
         reached_out_cum = []
-        reached_in = Set([])
         reached_in_cum = []
         for i in range(100):
             node = graph.GetRndNId()
             bfs_out = snap.GetBfsTree(graph, node, True, False)
             bfs_in = snap.GetBfsTree(graph, node, False, True)
-            for edge in bfs_out.Edges():
-                reached_out.add(edge.GetSrcNId())
-                reached_out.add(edge.GetDstNId())
-            for edge in bfs_in.Edges():
-                reached_in.add(edge.GetSrcNId())
-                reached_in.add(edge.GetDstNId())
-            reached_out_cum.append(len(reached_out))
-            reached_in_cum.append(len(reached_in))
+            reached_out_cum.append(bfs_out.GetNodes())
+            reached_in_cum.append(bfs_in.GetNodes())
+
+        reached_out_cum = sorted(reached_out_cum)
+        reached_in_cum = sorted(reached_in_cum)
 
         y = reached_out_cum
-        if name == 'epinions':
+        if True:#name == 'epinions':
             plt.plot(y, label='Reachability using outlinks for %s' % name)
             plt.yscale('log')
-        else:
-            plt.plot(y, label='Reachability using outlinks for %s' % name)
+        #else:
+        #    plt.plot(y, label='Reachability using outlinks for %s' % name)
         plt.savefig('outlinks_%s.png' % name)
         plt.close()
 
         y = reached_in_cum
-        if name == 'email':
+        if True:#name == 'email':
             plt.plot(y, label='Reachability using inlinks for %s' % name)
             plt.yscale('log')
-        else:
-            plt.plot(y, label='Reachability using inlinks for %s' % name)
+        #else:
+        #    plt.plot(y, label='Reachability using inlinks for %s' % name)
         plt.savefig('inlinks_%s.png' % name)
         plt.close()
 

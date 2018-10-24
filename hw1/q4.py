@@ -39,7 +39,7 @@ def build_hdn(graph):
     print 'nodes = {}'.format(dgraph.GetNodes())
     print 'edges = {}'.format(dgraph.GetEdges())
     print 'density = {}'.format(2.0 * dgraph.GetEdges() / (dgraph.GetNodes() * (dgraph.GetNodes() - 1.0)))
-    print 'clust coef = {}'.format(snap.GetClustCf(dgraph, 100))
+    print 'clust coef = {}'.format(snap.GetClustCf(dgraph, 1000))
     return dgraph
 
 def load_graph():
@@ -89,10 +89,14 @@ def deg_counts_plot(deg_counts, color):
     y = np.log10(y)
     plt.plot(x, y, color=color, linestyle="", marker="o")
 
-def get_neighbors(graph, nodeId):
+def get_neighbors(graph, nodeId, othergraph=None):
     n = set([])
     for i in range(graph.GetNI(nodeId).GetDeg()):
-        n.add(graph.GetNI(nodeId).GetNbrNId(i))
+        nid = graph.GetNI(nodeId).GetNbrNId(i)
+        if othergraph is not None:
+            if not othergraph.IsNode(nid):
+                continue
+        n.add(nid)
     return n
    
 def max_clique(graph):
@@ -129,8 +133,6 @@ def disease_sim(graph):
             nid_nb = get_neighbors(graph, nid)
             nb = get_neighbors(graph, node.GetId())
             if metric == 'CN':
-                print nid_nb
-                print nb
                 score = len(nid_nb.intersection(nb))
             else:
                 score = len(nid_nb.intersection(nb)) / (1.0 * len(nid_nb.union(nb)))
@@ -154,14 +156,26 @@ def disease_sim(graph):
 
 def contraction(graph, hdn):
     
+    supernodes = set([])
+
     def contract_clique(node):
-        clique = get_neighbors(graph, node.GetId())
+        clique = get_neighbors(graph, node.GetId(), othergraph=hdn)
         supernodeId = clique.pop()
+        assert(hdn.IsNode(supernodeId))
+        supernodes.add(supernodeId)
         for nodeId in clique:
+            if nodeId in supernodes:
+                continue
             for nbrId in get_neighbors(hdn, nodeId):
+                if not hdn.IsNode(nbrId):
+                    continue
+                assert(hdn.IsNode(supernodeId))
+                assert(hdn.IsNode(nbrId))
                 hdn.AddEdge(supernodeId, nbrId)
+            assert(not supernodeId == nodeId)
+            assert(nodeId not in supernodes)
             hdn.DelNode(nodeId)
-            graph.DelNode(nodeId)
+            #graph.DelNode(nodeId)
 
     node = graph.BegNI()
     while node < graph.EndNI():
@@ -174,48 +188,19 @@ def contraction(graph, hdn):
     print ''
     print 'Contracted graph stats'
     print 'clust cf = {}'.format(clust_cf)
-    print 'density = {}'.format(2 * contracted.GetEdges() / (contracted.GetNodes() * (contracted.GetNodes() - 1)))
-
-def contraction(graph, hdn):
-    
-    def contract_clique(node):
-        clique = get_neighbors(graph, node.GetId())
-        supernodeId = clique.pop()
-        for nodeId in clique:
-            for nbrId in get_neighbors(hdn, nodeId):
-                hdn.AddEdge(supernodeId, nbrId)
-            hdn.DelNode(nodeId)
-
-    for node in graph.Nodes():
-        if is_gene(node) and node.GetDeg() > 250:
-            contract_clique(node)
-        
-    contracted = hdn
-    clust_cf = snap.GetClustCf(contracted, int(1000))
-    print ''
-    print 'Contracted graph stats'
-    print 'clust cf = {}'.format(clust_cf)
-    print 'density = {}'.format(2 * dgraph.GetEdges() / (dgraph.GetNodes() * (dgraph.GetNodes() - 1)))
+    print 'density = {}'.format(2.0 * contracted.GetEdges() / (contracted.GetNodes() * (contracted.GetNodes() - 1.0)))
+    print 'nodes = {}'.format(contracted.GetNodes())
+    print 'edges = {}'.format(contracted.GetEdges())
 
 def main():
     graph = load_graph()
     print_graph_stats(graph)
     make_plots(graph)    
     hdn = build_hdn(graph)
-    check_hdn_edges(hdn, graph) 
-    max_clique(graph)
     contraction(graph, hdn)
+    max_clique(graph)
     disease_sim(graph)
-    max_clique(graph)
-    contraction(graph, hdn)
-
-def check_hdn_edges(hdn, graph):
-    for node in graph.Nodes():
-        if is_gene(node):
-            for i in get_neighbors(graph, node.GetId()):
-                for j in get_neighbors(graph, node.GetId()):
-                    assert(hdn.IsEdge(i, j))
-
+   
 def print_graph_stats(graph):
     print 'nodes = {}'.format(graph.GetNodes())
     
